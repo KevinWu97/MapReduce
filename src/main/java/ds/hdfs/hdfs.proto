@@ -1,0 +1,65 @@
+package proto;
+
+option java_outer_classname = "ProtoHDFS";
+
+message BlockMeta {
+    required string fileName = 1;
+    required int32 blockNumber = 2;
+    required int32 repNumber = 3;
+    required string dataId = 4;
+}
+
+message Block {
+    required BlockMeta blockMeta = 1;
+    optional string blockContents = 2;
+}
+
+message Pipeline {
+    required int32 pipelineNumber = 1;
+    repeated Block blocks = 2;
+}
+
+message FileHandle {
+    required string fileName = 1;
+    required int32 fileSize = 2;
+    repeated Pipeline pipelines = 3;
+}
+
+message Request {
+    required string requestId = 1;
+    enum RequestType {
+        READ = 0;
+        WRITE = 1;
+        UPDATE = 2;
+        APPEND = 3;
+        DELETE = 4;
+        ACKNOW = 5;
+    }
+    required RequestType requestType = 2;
+    optional FileHandle fileHandle = 3;
+    repeated Block block = 4;
+}
+
+message Response {
+    required string responseId = 1;
+    enum ResponseType {
+        SUCCESS = 0;
+        FAILURE = 1;
+    }
+    required ResponseType responseType = 2;
+    optional FileHandle fileHandle = 3;
+    optional Block block = 4;
+    optional string errorMessage = 5;
+}
+
+message ListResponse {
+    required string responseId = 1;
+    enum ResponseType {
+        SUCCESS = 0;
+        FAILURE = 1;
+    }
+    required ResponseType responseType = 2;
+    optional string errorMessage = 3;
+    repeated string fileNames = 4;
+}
+
