@@ -7,6 +7,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
@@ -139,16 +141,31 @@ public class DataNode implements DataNodeInterface {
         }
     }
 
+    public DataNodeInterface getDNStub(String dataId, String dataIp, int dataPort) {
+        while(true){
+            try{
+                Registry registry = LocateRegistry.getRegistry(dataIp, dataPort);
+                DataNodeInterface dataNodeStub = (DataNodeInterface)registry.lookup(dataId);
+                System.out.println("\n Data Node Found! Replicating to Data Node \n");
+                return dataNodeStub;
+            }catch(RemoteException | NotBoundException e){
+                System.out.println("\n Searching for Data Node ... \n");
+            }finally{
+                System.out.println("timed out?!?!??!");
+            }
+
+        }
+    }
+
     // This method finds the Name Node and returns a stub (Remote to the Name Node) with which the Data Node
     // could use to invoke functions on the Name Node
-    public NameNodeInterface getNNStub(String nameId, String nameIp, int namePort){
+    public NameNodeInterface getNNStub(String id, String ip, int port){
         while(true){
             try{
                 // This gets the remote object registry at the specified port
-                Registry registry = LocateRegistry.getRegistry(nameIp, namePort);
-
+                Registry registry = LocateRegistry.getRegistry(ip, port);
                 // This gets the Remote to the Name Node using the ID of the Name Node
-                NameNodeInterface nameNodeStub = (NameNodeInterface)registry.lookup(nameId);
+                NameNodeInterface nameNodeStub = (NameNodeInterface)registry.lookup(id);
                 System.out.println("\n Name Node Found! \n");
                 return nameNodeStub;
             }catch(Exception e){

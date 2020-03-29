@@ -126,7 +126,7 @@ public class NameNode implements NameNodeInterface {
         // variable in fileHandle at this point should be empty
         ProtoHDFS.FileHandle fileHandle = request.getFileHandle();
         String fileName = fileHandle.getFileName();
-        int fileSize = fileHandle.getFileSize();
+        long fileSize = fileHandle.getFileSize();
 
         synchronized (this){
             // This part locks the file handle once it has been created
@@ -152,7 +152,7 @@ public class NameNode implements NameNodeInterface {
         // Make block size and replication factor to be configurable later
         int blockSize = 64000000;
         int repFactor = 3;
-        int numBlocks = fileSize / blockSize + 1;
+        int numBlocks = (int) (fileSize / blockSize + 1);
 
         ProtoHDFS.FileHandle.Builder fileHandleBuilder = ProtoHDFS.FileHandle.newBuilder();
         ArrayList<ProtoHDFS.Pipeline> pipelines = new ArrayList<>();

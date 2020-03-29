@@ -21,7 +21,7 @@ message Pipeline {
 
 message FileHandle {
     required string fileName = 1;
-    required int32 fileSize = 2;
+    required int64 fileSize = 2;
     repeated Pipeline pipelines = 3;
 }
 
@@ -33,7 +33,8 @@ message Request {
         UPDATE = 2;
         APPEND = 3;
         DELETE = 4;
-        ACKNOW = 5;
+        CLOSE = 5;
+        LIST = 6;
     }
     required RequestType requestType = 2;
     optional FileHandle fileHandle = 3;
@@ -61,5 +62,15 @@ message ListResponse {
     required ResponseType responseType = 2;
     optional string errorMessage = 3;
     repeated string fileNames = 4;
+}
+
+message Heartbeat {
+    required string dataId = 1;
+    required string dataIp = 2;
+    required string dataPort = 3;
+}
+
+message BlockReport {
+    repeated Block dataNodeBlocks = 1;
 }
 
