@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class Client {
     public DataNodeInterface dataStub;
@@ -65,11 +66,13 @@ public class Client {
         ProtoHDFS.FileHandle.Builder fileHandleBuilder = ProtoHDFS.FileHandle.newBuilder();
         fileHandleBuilder.setFileName(fileName);
         fileHandleBuilder.setFileSize(file.length());
+        ProtoHDFS.FileHandle fileHandle = fileHandleBuilder.buildPartial();
 
         ProtoHDFS.Request.Builder requestBuilder = ProtoHDFS.Request.newBuilder();
         String requestId = UUID.randomUUID().toString();
         requestBuilder.setRequestId(requestId);
         requestBuilder.setRequestType(ProtoHDFS.Request.RequestType.WRITE);
+        requestBuilder.setFileHandle(fileHandle);
         ProtoHDFS.Request openRequest = requestBuilder.buildPartial();
         requestBuilder.clear();
 
@@ -87,7 +90,9 @@ public class Client {
         if(openResponseType == ProtoHDFS.Response.ResponseType.SUCCESS){
             // If write file completed successfully send write requests to the data nodes
             // using the file handle obtained from the response
-            ProtoHDFS.FileHandle fileHandle = openResponse.getFileHandle();
+            System.out.println("File " + fileName + " successfully opened");
+
+            fileHandle = openResponse.getFileHandle();
             List<ProtoHDFS.Pipeline> pipelineList = fileHandle.getPipelinesList();
             ArrayList<ProtoHDFS.Pipeline> pipelineArrayList = new ArrayList<>(pipelineList);
             for(int i = 0; i < numBlocks; i++){
@@ -124,24 +129,16 @@ public class Client {
                 ProtoHDFS.Response.ResponseType writeResponseType = writeResponse.getResponseType();
 
                 if(writeResponseType == ProtoHDFS.Response.ResponseType.SUCCESS){
-                    System.out.println("-------------------------------Write Success--------------------------------");
-                    if(writeResponse.hasErrorMessage()){
-                        String errorString = writeResponse.getErrorMessage();
-                        System.out.println(errorString);
-                    }
+                    System.out.println("File " + fileName + " successfully written");
                 }else{
-                    System.out.println("------------------------------Critical Failure------------------------------");
-                    String errorString = writeResponse.getErrorMessage();
-                    System.out.println(errorString);
+                    System.out.println(writeResponse.getErrorMessage());
+                    return;
                 }
-                System.out.println("----------------------------------------------------------------------------");
             }
         }else{
             // If failed to open and get file handle
-            System.out.println("------------------------------Critical Failure------------------------------");
-            String errorString = openResponse.getErrorMessage();
-            System.out.println(errorString);
-            System.out.println("----------------------------------------------------------------------------");
+            System.out.println(openResponse.getErrorMessage());
+            return;
         }
 
         // Now send a close request to close (or unlock) the other file handle so other threads can use it
@@ -155,23 +152,77 @@ public class Client {
         ProtoHDFS.Response closeResponse = ProtoHDFS.Response.parseFrom(closeResponseBytes);
         String closeResponseId = closeResponse.getResponseId();
         ProtoHDFS.Response.ResponseType closeResponseType = closeResponse.getResponseType();
-        if(closeResponseType == ProtoHDFS.Response.ResponseType.SUCCESS){
-            System.out.println("-------------------------------Close Success--------------------------------");
-            if(closeResponse.hasErrorMessage()){
-                String errorString = closeResponse.getErrorMessage();
-                System.out.println(errorString);
-            }
-        }else{
-            System.out.println("------------------------------Critical Failure------------------------------");
-            String errorString = closeResponse.getErrorMessage();
-            System.out.println(errorString);
-        }
-        System.out.println("----------------------------------------------------------------------------");
 
+        // !!!!!!!!!!! We need to implement something that allows it to keep sending close requests until
+        // file handle fails to unlock. Otherwise we'll run into deadlock !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        if(closeResponseType == ProtoHDFS.Response.ResponseType.SUCCESS){
+            System.out.println("File handle for " + fileName + " successfully closed");
+        }else{
+            System.out.println(closeResponse.getErrorMessage());
+        }
     }
 
     public void getFile(String fileName) {
         System.out.println("Going to get " + fileName);
+        File file = new File(fileName);
+        FileOutputStream fileOutputStream;
+        ProtoHDFS.Request.Builder requestBuilder = ProtoHDFS.Request.newBuilder();
+
+        try{
+            if(file.exists() || file.createNewFile()){
+                fileOutputStream = new FileOutputStream(file);
+
+                ProtoHDFS.FileHandle.Builder fileHandleBuilder = ProtoHDFS.FileHandle.newBuilder();
+                fileHandleBuilder.setFileName(fileName);
+                fileHandleBuilder.setFileSize(file.length());
+                ProtoHDFS.FileHandle fileHandle = fileHandleBuilder.buildPartial();
+                fileHandleBuilder.clear();
+
+                String openRequestId = UUID.randomUUID().toString();
+                requestBuilder.setRequestId(openRequestId);
+                requestBuilder.setRequestType(ProtoHDFS.Request.RequestType.READ);
+                requestBuilder.setFileHandle(fileHandle);
+                ProtoHDFS.Request openRequest = requestBuilder.buildPartial();
+                requestBuilder.clear();
+
+                // Configure these values later
+                String nameId = "namenode";
+                String nameIp = "192.168.12.75";
+                int port = 1099;
+
+                NameNodeInterface nameStub = getNameStub(nameId, nameIp, port);
+                byte[] openResponseBytes = nameStub.openFile(openRequest.toByteArray());
+
+                ProtoHDFS.Response openResponse = ProtoHDFS.Response.parseFrom(openResponseBytes);
+                String openResponseId = openResponse.getResponseId();
+                ProtoHDFS.Response.ResponseType openResponseType = openResponse.getResponseType();
+                fileHandle = openResponse.getFileHandle();
+
+                List<ProtoHDFS.Pipeline> pipelines = fileHandle.getPipelinesList();
+                ArrayList<List<ProtoHDFS.Block>> blocksList = pipelines.stream()
+                        .map(ProtoHDFS.Pipeline::getBlocksList)
+                        .collect(Collectors.toCollection(ArrayList::new));
+                boolean hasMissingBlock = blocksList.parallelStream().anyMatch(List::isEmpty);
+
+                if(hasMissingBlock){
+                    // If the list of block replicas is empty for any of the blocks, immediately throw an error
+                    // Maybe toss out the file as well since it's corrupted?
+                }else{
+                    ArrayList<ProtoHDFS.Block> readBlocks = blocksList.stream()
+                            .map(p -> p.get(0))
+                            .collect(Collectors.toCollection(ArrayList::new));
+                    // Writes the contents from a copy of each block into the fileOutputStream
+                    for (ProtoHDFS.Block b : readBlocks) {
+                        byte[] bytes = b.getBlockContents().getBytes();
+                        fileOutputStream.write(bytes);
+                    }
+                }
+            }else{
+                System.out.println("Failed to create " + fileName + " to read to");
+            }
+        }catch(Exception e){
+            System.out.println("File " + fileName + " not found!");
+        }
     }
 
     public void list() throws InvalidProtocolBufferException, RemoteException {
@@ -194,53 +245,14 @@ public class Client {
         ProtoHDFS.ListResponse.ResponseType listResponseType = listResponse.getResponseType();
 
         if(listResponseType == ProtoHDFS.ListResponse.ResponseType.SUCCESS){
-            System.out.println("-------------------------------List Success---------------------------------");
-            if(listResponse.hasErrorMessage()){
-                String errorString = listResponse.getErrorMessage();
-                System.out.println(errorString);
-            }
-
             // Gets the list of files and prints it out line by line
             List<String> filesList = listResponse.getFileNamesList();
             //noinspection SimplifyStreamApiCallChains
             filesList.stream().forEach(System.out :: println);
         }else{
-            System.out.println("------------------------------Critical Failure------------------------------");
-            String errorString = listResponse.getErrorMessage();
-            System.out.println(errorString);
-        }
-
-        System.out.println("----------------------------------------------------------------------------");
-    }
-
-    /*
-    public void putFile(String fileName){
-        System.out.println("Going to put file " + fileName);
-        File file = new File(fileName);
-        FileInputStream fileInputStream;
-        try{
-            fileInputStream = new FileInputStream(file);
-        }catch(Exception e){
-            System.out.println("File " + fileName + " not found!");
+            System.out.println(listResponse.getErrorMessage());
         }
     }
-
-    public void getFile(String fileName){
-        System.out.println("Going to get file " + fileName);
-        File file = new File(fileName);
-        FileOutputStream fileOutputStream;
-        try{
-            fileOutputStream = new FileOutputStream(file);
-        }catch(Exception e){
-            System.out.println("File " + fileName + " not found!");
-        }
-    }
-
-    public void list(){
-
-    }
-
-     */
 
     public static void main(String[] args){
 
