@@ -129,13 +129,11 @@ public class Client {
                         System.out.println("File " + fileName + " successfully written");
                     }else{
                         System.out.println(writeResponse.getErrorMessage());
-                        return;
                     }
                 }
             }else{
                 // If failed to open and get file handle
                 System.out.println(openResponse.getErrorMessage());
-                return;
             }
 
             // Now send a close request to close (or unlock) the other file handle so other threads can use it

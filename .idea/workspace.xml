@@ -2,9 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="7ad1498a-67a0-4e0c-85d1-1bf49b2a9e02" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/ds/hdfs/Client.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ds/hdfs/Client.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/ds/hdfs/NameNode.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ds/hdfs/NameNode.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -89,7 +89,7 @@
       <workItem from="1585164173279" duration="26944000" />
       <workItem from="1585324936743" duration="619000" />
       <workItem from="1585327787659" duration="24329000" />
-      <workItem from="1585427818702" duration="26136000" />
+      <workItem from="1585427818702" duration="28424000" />
     </task>
     <servers />
   </component>

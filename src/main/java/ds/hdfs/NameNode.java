@@ -234,6 +234,8 @@ public class NameNode implements NameNodeInterface {
 
     @Override
     public byte[] heartBeat(byte[] inp) throws RemoteException {
+        ProtoHDFS.Heartbeat heartbeat = ProtoHDFS.Heartbeat.parseFrom(inp);
+
         return new byte[0];
     }
 
