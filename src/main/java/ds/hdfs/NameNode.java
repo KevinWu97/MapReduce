@@ -229,7 +229,26 @@ public class NameNode implements NameNodeInterface {
 
     @Override
     public byte[] blockReport(byte[] inp) throws RemoteException {
-        return new byte[0];
+    while(true)
+    {
+    try{
+
+        ProtoHDFS.Blockreport blockreport = ProtoHDFS.Blockreport.parseFrom(inp);
+     }catch (InvalidProtocolBufferException e) {
+    
+    e.printStackTrace();
+  
+    //time interval for 5 seconds
+    Thread.sleep(5000);
+  
+    //send heartbeat
+    datastub.blockReport();
+
+  }
+
+  return null;
+
+  }
     }
 
     @Override
