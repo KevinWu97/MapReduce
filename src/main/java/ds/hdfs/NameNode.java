@@ -234,10 +234,28 @@ public class NameNode implements NameNodeInterface {
 
     @Override
     public byte[] heartBeat(byte[] inp) throws RemoteException {
-        ProtoHDFS.Heartbeat heartbeat = ProtoHDFS.Heartbeat.parseFrom(inp);
+    while(true)
+    {
+    try{
 
-        return new byte[0];
-    }
+        ProtoHDFS.Heartbeat heartbeat = ProtoHDFS.Heartbeat.parseFrom(inp);
+     }catch (InvalidProtocolBufferException e) {
+    
+    e.printStackTrace();
+  
+    //time interval for 4 seconds
+    Thread.sleep(4000);
+  
+    //send heartbeat
+    datastub.heartbeat();
+
+  }
+
+  return null;
+
+  }
+}
+    
 
     public static void main(String[] args){
 
