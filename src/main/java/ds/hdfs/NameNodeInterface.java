@@ -26,8 +26,8 @@ public interface NameNodeInterface extends Remote {
 	*/
 
     /* Get the status for blocks */
-    byte[] blockReport(byte[] inp) throws RemoteException;
+    byte[] blockReport(byte[] inp) throws RemoteException, InvalidProtocolBufferException;
 
     /* Heartbeat messages between NameNode and DataNode */
-    byte[] heartBeat(byte[] inp) throws RemoteException;
+    byte[] heartBeat(byte[] inp) throws RemoteException, InvalidProtocolBufferException;
 }

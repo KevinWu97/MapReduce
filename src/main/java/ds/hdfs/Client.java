@@ -79,6 +79,7 @@ public class Client {
             int port = 1099;
 
             NameNodeInterface nameStub = getNameStub(nameId, nameIp, port);
+            // OPEN file handle using name node
             byte[] openResponseBytes = nameStub.openFile(openRequest.toByteArray());
 
             ProtoHDFS.Response openResponse = ProtoHDFS.Response.parseFrom(openResponseBytes);
@@ -119,8 +120,10 @@ public class Client {
                     String dataIp = "192.168.12.1";
                     int dataPort = 1099;
 
+                    // WRITE to the data nodes
                     DataNodeInterface dataStub = getDataStub(dataId, dataIp, dataPort);
                     byte[] writeResponseBytes = dataStub.writeBlock(writeBlockRequest.toByteArray());
+
                     ProtoHDFS.Response writeResponse = ProtoHDFS.Response.parseFrom(writeResponseBytes);
                     String writeResponseId = writeResponse.getResponseId();
                     ProtoHDFS.Response.ResponseType writeResponseType = writeResponse.getResponseType();
@@ -143,13 +146,15 @@ public class Client {
             ProtoHDFS.Request closeRequest = requestBuilder.buildPartial();
             requestBuilder.clear();
 
+            // CLOSE file handle here
             byte[] closeResponseBytes = nameStub.closeFile(closeRequest.toByteArray());
             ProtoHDFS.Response closeResponse = ProtoHDFS.Response.parseFrom(closeResponseBytes);
+
             String closeResponseId = closeResponse.getResponseId();
             ProtoHDFS.Response.ResponseType closeResponseType = closeResponse.getResponseType();
 
             // !!!!!!!!!!! We need to implement something that allows it to keep sending close requests until
-            // file handle fails to unlock. Otherwise we'll run into deadlock !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            // file handle unlocks. Otherwise we'll run into deadlock !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             if(closeResponseType == ProtoHDFS.Response.ResponseType.SUCCESS){
                 System.out.println("File handle for " + fileName + " successfully closed");
             }else{

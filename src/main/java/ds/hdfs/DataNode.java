@@ -14,6 +14,7 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class DataNode implements DataNodeInterface {
@@ -78,6 +79,7 @@ public class DataNode implements DataNodeInterface {
     public byte[] writeBlock(byte[] inp) throws IOException {
         ProtoHDFS.Request request = ProtoHDFS.Request.parseFrom(inp);
         String requestId = request.getRequestId();
+        ProtoHDFS.Request.RequestType requestType = request.getRequestType();
 
         // Make the replication factor configurable later
         int repFactor = 3;
@@ -94,7 +96,20 @@ public class DataNode implements DataNodeInterface {
 
         if(repNumber < repFactor){
             // Send a 'request' object to the next data node to replicate block on another data node
-            // Still need to figure out how to access other data nodes from a data node
+            // if the number of replicas is not enough
+            ProtoHDFS.Request.Builder requestBuilder = ProtoHDFS.Request.newBuilder();
+            String replicateRequestId = UUID.randomUUID().toString();
+            requestBuilder.setRequestId(replicateRequestId);
+            requestBuilder.setRequestType(requestType);
+            requestBuilder.addAllBlock(blockList);
+            ProtoHDFS.Request replicateRequest = requestBuilder.buildPartial();
+            requestBuilder.clear();
+
+            String dataNodeId = blockMeta.getDataId();
+            String dataNodeIp = blockMeta.getDataIp();
+            int dataPort = blockMeta.getPort();
+            DataNodeInterface dataStub = getDNStub(dataNodeId, dataNodeIp, dataPort);
+            dataStub.writeBlock(replicateRequest.toByteArray());
         }
 
         String blockName = fileName + "_" + blockNumber + "_" + repNumber;
@@ -128,12 +143,11 @@ public class DataNode implements DataNodeInterface {
             System.setProperty("java.rmi.server.hostname", dataIp);
 
             // This gets reference to remote object registry located at the specified port
-            Registry registry = LocateRegistry.getRegistry(dataPort);
+            Registry registry = LocateRegistry.getRegistry(dataIp, dataPort);
 
             // This rebinds the Data Node to the remote object registry at the specified port in the previous step
             // Uses the values of id (or 'name') of the Data Node and a Remote which is the stub for this Data node
             registry.rebind(dataId, dataNodeStub);
-
             System.out.println("\n Data Node connected to RMI registry \n");
         }catch(Exception e){
             System.err.println("Server Exception: " + e.toString());
@@ -150,10 +164,7 @@ public class DataNode implements DataNodeInterface {
                 return dataNodeStub;
             }catch(RemoteException | NotBoundException e){
                 System.out.println("\n Searching for Data Node ... \n");
-            }finally{
-                System.out.println("timed out?!?!??!");
             }
-
         }
     }
 

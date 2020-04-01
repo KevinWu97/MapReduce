@@ -7,6 +7,9 @@ message BlockMeta {
     required int32 blockNumber = 2;
     required int32 repNumber = 3;
     required string dataId = 4;
+    required string dataIp = 5;
+    required int32 port = 6;
+    required bool initialized = 7;
 }
 
 message Block {
@@ -64,13 +67,18 @@ message ListResponse {
     repeated string fileNames = 4;
 }
 
+message NodeMeta {
+    required string id = 1;
+    required string ip = 2;
+    required int32 port = 3;
+}
+
 message Heartbeat {
-    required string dataId = 1;
-    required string dataIp = 2;
-    required string dataPort = 3;
+    required NodeMeta dataNodeMeta = 1;
 }
 
 message BlockReport {
-    repeated Block dataNodeBlocks = 1;
+    required string dataId = 1;
+    repeated Block dataNodeBlocks = 2;
 }
 

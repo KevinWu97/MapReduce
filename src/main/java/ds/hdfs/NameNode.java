@@ -5,14 +5,20 @@ import proto.ProtoHDFS;
 
 import java.rmi.RemoteException;
 import java.rmi.registry.Registry;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
 public class NameNode implements NameNodeInterface {
     protected Registry serverRegistry;
-    protected ConcurrentHashMap<String, Boolean> requestsFulfilled;
+    protected ConcurrentHashMap<String, AtomicBoolean> requestsFulfilled;
+    protected ConcurrentHashMap<String, ProtoHDFS.NodeMeta> dataNodeMetas;
+    protected ConcurrentHashMap<String, Instant> heartbeatTimestamps;
+    protected ConcurrentHashMap<String, List<ProtoHDFS.Block>> dataNodeBlocks;
     protected ConcurrentHashMap<String, ProtoHDFS.FileHandle> fileHandles;
     protected ConcurrentHashMap<String, ReentrantReadWriteLock> fileLocks;
     protected String nameId;
@@ -99,7 +105,8 @@ public class NameNode implements NameNodeInterface {
         ProtoHDFS.FileHandle responseFileHandle = this.fileHandles.get(fileName);
         List<ProtoHDFS.Pipeline> pipelines = responseFileHandle.getPipelinesList();
         for(ProtoHDFS.Pipeline p : pipelines){
-            p.getBlocksList().sort(new RepSorter());
+            p.getBlocksList().stream().filter(ProtoHDFS.Block::isInitialized)
+                    .collect(Collectors.toList()).sort(new RepSorter());
         }
         pipelines.sort(new PipelineSorter());
 
@@ -160,18 +167,29 @@ public class NameNode implements NameNodeInterface {
             ProtoHDFS.Pipeline.Builder pipelineBuilder = ProtoHDFS.Pipeline.newBuilder();
             ArrayList<ProtoHDFS.Block> blocks = new ArrayList<>();
 
-            // This part picks three random data nodes using the Data Node Ids
-            String[] dataNodes = this.serverRegistry.list();
-            List<String> dataNodesList = Arrays.asList(dataNodes);
+            List<String> dataNodeKeys = Collections.list(this.dataNodeMetas.keys());
+            ArrayList<ProtoHDFS.NodeMeta> dataNodesList = new ArrayList<>();
+            for(String key : dataNodeKeys){
+                dataNodesList.add(this.dataNodeMetas.get(key));
+            }
+
+            ArrayList<ProtoHDFS.NodeMeta> activeDataNodes = dataNodesList.stream()
+                    .filter(nodeMeta -> Duration.between(heartbeatTimestamps.get(nodeMeta.getId()),
+                            Instant.now()).toMillis() < 3000)
+                    .collect(Collectors.toCollection(ArrayList::new));
             Collections.shuffle(dataNodesList);
-            List<String> selectedDataNodes = dataNodesList.subList(0, repFactor);
+            List<ProtoHDFS.NodeMeta> selectedDataNodes = activeDataNodes.subList(0, repFactor);
+
 
             for(int j = 0; j < repFactor; j++){
                 ProtoHDFS.BlockMeta.Builder blockMetaBuilder = ProtoHDFS.BlockMeta.newBuilder();
                 blockMetaBuilder.setFileName(fileName);
                 blockMetaBuilder.setBlockNumber(i);
                 blockMetaBuilder.setRepNumber(j);
-                blockMetaBuilder.setDataId(selectedDataNodes.get(j));
+                blockMetaBuilder.setDataId(selectedDataNodes.get(j).getId());
+                blockMetaBuilder.setDataIp(selectedDataNodes.get(j).getIp());
+                blockMetaBuilder.setPort(selectedDataNodes.get(j).getPort());
+                blockMetaBuilder.setInitialized(false);
                 ProtoHDFS.BlockMeta blockMeta = blockMetaBuilder.build();
                 blockMetaBuilder.clear();
 
@@ -228,15 +246,75 @@ public class NameNode implements NameNodeInterface {
     }
 
     @Override
-    public byte[] blockReport(byte[] inp) throws RemoteException {
-        return new byte[0];
+    public synchronized byte[] blockReport(byte[] inp) throws RemoteException, InvalidProtocolBufferException {
+        ProtoHDFS.BlockReport blockReport = ProtoHDFS.BlockReport.parseFrom(inp);
+        String dataId = blockReport.getDataId();
+        List<ProtoHDFS.Block> dataBlocks = blockReport.getDataNodeBlocksList();
+
+        ProtoHDFS.BlockMeta.Builder blockMetaBuilder = ProtoHDFS.BlockMeta.newBuilder();
+        ProtoHDFS.Block.Builder blockBuilder = ProtoHDFS.Block.newBuilder();
+
+        for(ProtoHDFS.Block b : dataBlocks){
+            ProtoHDFS.BlockMeta bMeta = b.getBlockMeta();
+            String fileName = bMeta.getFileName();
+            int blockNumber = bMeta.getBlockNumber();
+            int repNumber = bMeta.getRepNumber();
+            String dataIp = bMeta.getDataIp();
+            int dataPort = bMeta.getPort();
+
+            if(!this.fileHandles.get(fileName).getPipelines(blockNumber).getBlocks(repNumber).isInitialized()){
+                blockMetaBuilder.setFileName(fileName);
+                blockMetaBuilder.setBlockNumber(blockNumber);
+                blockMetaBuilder.setRepNumber(repNumber);
+                blockMetaBuilder.setDataId(dataId);
+                blockMetaBuilder.setDataIp(dataIp);
+                blockMetaBuilder.setPort(dataPort);
+                blockMetaBuilder.setInitialized(true);
+                ProtoHDFS.BlockMeta newBlockMeta = blockMetaBuilder.build();
+                blockMetaBuilder.clear();
+
+                blockBuilder.setBlockMeta(newBlockMeta);
+                ProtoHDFS.Block newBlock = blockBuilder.buildPartial();
+                blockBuilder.clear();
+
+                // Sets block to initialized
+                this.fileHandles.get(fileName).getPipelines(blockNumber).getBlocksList().set(repNumber, newBlock);
+            }
+        }
+
+        this.dataNodeBlocks.replace(dataId, dataBlocks);
+
+        ProtoHDFS.NodeMeta.Builder nodeMetaBuilder = ProtoHDFS.NodeMeta.newBuilder();
+        nodeMetaBuilder.setId(this.nameId);
+        nodeMetaBuilder.setIp(this.nameIp);
+        nodeMetaBuilder.setPort(this.port);
+        ProtoHDFS.NodeMeta nodeMeta = nodeMetaBuilder.build();
+        nodeMetaBuilder.clear();
+
+        return nodeMeta.toByteArray();
     }
 
     @Override
-    public byte[] heartBeat(byte[] inp) throws RemoteException {
+    public synchronized byte[] heartBeat(byte[] inp) throws RemoteException, InvalidProtocolBufferException {
         ProtoHDFS.Heartbeat heartbeat = ProtoHDFS.Heartbeat.parseFrom(inp);
+        ProtoHDFS.NodeMeta dataNodeMeta = heartbeat.getDataNodeMeta();
+        String dataNodeId = dataNodeMeta.getId();
 
-        return new byte[0];
+        if(this.heartbeatTimestamps.containsKey(dataNodeId)){
+            this.heartbeatTimestamps.replace(dataNodeId, Instant.now());
+        }else{
+            this.heartbeatTimestamps.put(dataNodeId, Instant.now());
+            this.dataNodeMetas.put(dataNodeId, dataNodeMeta);
+        }
+
+        ProtoHDFS.NodeMeta.Builder nodeMetaBuilder = ProtoHDFS.NodeMeta.newBuilder();
+        nodeMetaBuilder.setId(this.nameId);
+        nodeMetaBuilder.setIp(this.nameIp);
+        nodeMetaBuilder.setPort(this.port);
+        ProtoHDFS.NodeMeta nodeMeta = nodeMetaBuilder.build();
+        nodeMetaBuilder.clear();
+
+        return nodeMeta.toByteArray();
     }
 
     public static void main(String[] args){
