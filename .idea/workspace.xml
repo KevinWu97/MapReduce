@@ -2,10 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="7ad1498a-67a0-4e0c-85d1-1bf49b2a9e02" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/src/main/java/ds/hdfs/ConfigureHDFS.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ds/hdfs/ConfigureNameNode.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/ds/hdfs/Client.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ds/hdfs/Client.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/ds/hdfs/DataNode.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ds/hdfs/DataNode.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/ds/hdfs/NameNode.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ds/hdfs/NameNode.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -93,7 +92,7 @@
       <workItem from="1585427818702" duration="31004000" />
       <workItem from="1585673968318" duration="5893000" />
       <workItem from="1585686374386" duration="17999000" />
-      <workItem from="1585713678426" duration="10979000" />
+      <workItem from="1585713678426" duration="12660000" />
     </task>
     <servers />
   </component>
