@@ -9,13 +9,12 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
 public class NameNode implements NameNodeInterface {
     protected Registry serverRegistry;
-    protected ConcurrentHashMap<String, AtomicBoolean> requestsFulfilled;
+    protected ConcurrentHashMap<String, Boolean> requestsFulfilled;
     protected ConcurrentHashMap<String, ProtoHDFS.NodeMeta> dataNodeMetas;
     protected ConcurrentHashMap<String, Instant> heartbeatTimestamps;
     protected ConcurrentHashMap<String, List<ProtoHDFS.Block>> dataNodeBlocks;
@@ -31,6 +30,9 @@ public class NameNode implements NameNodeInterface {
         String requestId = request.getRequestId();
         ProtoHDFS.Request.RequestType operation = request.getRequestType();
         ProtoHDFS.FileHandle fileHandle = request.getFileHandle();
+        if(!this.requestsFulfilled.containsKey(requestId) || !this.requestsFulfilled.get(requestId)){
+            this.requestsFulfilled.putIfAbsent(requestId, false);
+        }
 
         String fileName = fileHandle.getFileName();
         if(this.fileHandles.containsKey(fileName)){
@@ -46,19 +48,34 @@ public class NameNode implements NameNodeInterface {
                 responseBuilder.setErrorMessage("File " + fileName + " already exists! Write failed!");
                 ProtoHDFS.Response response = responseBuilder.buildPartial();
                 responseBuilder.clear();
+                this.requestsFulfilled.replace(requestId, true);
                 return response.toByteArray();
             }
         }else{
-            // If file does not exist, assign the blocks of the file to different data nodes
-            return assignBlock(inp);
+            // If file does not exist and its a write request assign the blocks of the file to different data nodes
+            // If its a read request, return an error
+            if(operation == ProtoHDFS.Request.RequestType.WRITE){
+                return assignBlock(inp);
+            }else if(operation == ProtoHDFS.Request.RequestType.READ){
+                ProtoHDFS.Response.Builder responseBuilder = ProtoHDFS.Response.newBuilder();
+                responseBuilder.setResponseId(requestId);
+                responseBuilder.setResponseType(ProtoHDFS.Response.ResponseType.FAILURE);
+                responseBuilder.setErrorMessage("File " + fileName + " does not exists! Read failed!");
+                ProtoHDFS.Response response = responseBuilder.buildPartial();
+                responseBuilder.clear();
+                this.requestsFulfilled.replace(requestId, true);
+                return response.toByteArray();
+            }
         }
 
+        // Should not happen
         ProtoHDFS.Response.Builder responseBuilder = ProtoHDFS.Response.newBuilder();
         responseBuilder.setResponseId(requestId);
         responseBuilder.setResponseType(ProtoHDFS.Response.ResponseType.FAILURE);
         responseBuilder.setErrorMessage("Invalid Request Type!");
         ProtoHDFS.Response response = responseBuilder.buildPartial();
         responseBuilder.clear();
+        this.requestsFulfilled.replace(requestId, true);
         return response.toByteArray();
     }
 
@@ -104,11 +121,29 @@ public class NameNode implements NameNodeInterface {
 
         ProtoHDFS.FileHandle responseFileHandle = this.fileHandles.get(fileName);
         List<ProtoHDFS.Pipeline> pipelines = responseFileHandle.getPipelinesList();
+        List<ProtoHDFS.Pipeline> newPipelines = new ArrayList<>();
+
+        ProtoHDFS.FileHandle.Builder fileHandleBuilder = ProtoHDFS.FileHandle.newBuilder();
+        ProtoHDFS.Pipeline.Builder pipeLineBuilder = ProtoHDFS.Pipeline.newBuilder();
+
         for(ProtoHDFS.Pipeline p : pipelines){
-            p.getBlocksList().stream().filter(ProtoHDFS.Block::isInitialized)
-                    .collect(Collectors.toList()).sort(new RepSorter());
+            p.getBlocksList().sort(new RepSorter());
+            ArrayList<ProtoHDFS.Block> newBlocksList = p.getBlocksList().stream()
+                    .filter(ProtoHDFS.Block::isInitialized)
+                    .collect(Collectors.toCollection(ArrayList::new));
+
+            pipeLineBuilder.addAllBlocks(newBlocksList);
+            ProtoHDFS.Pipeline newPipeline = pipeLineBuilder.build();
+            pipeLineBuilder.clear();
+            newPipelines.add(newPipeline);
         }
-        pipelines.sort(new PipelineSorter());
+
+        newPipelines.sort(new PipelineSorter());
+        fileHandleBuilder.setFileName(fileName);
+        fileHandleBuilder.setFileSize(responseFileHandle.getFileSize());
+        fileHandleBuilder.addAllPipelines(newPipelines);
+        responseFileHandle = fileHandleBuilder.build();
+        fileHandleBuilder.clear();
 
         ProtoHDFS.Response.Builder responseBuilder = ProtoHDFS.Response.newBuilder();
         responseBuilder.setResponseId(requestId);
@@ -118,6 +153,7 @@ public class NameNode implements NameNodeInterface {
         ProtoHDFS.Response response = responseBuilder.buildPartial();
         responseBuilder.clear();
 
+        this.requestsFulfilled.replace(requestId, true);
         return response.toByteArray();
     }
 
@@ -148,6 +184,7 @@ public class NameNode implements NameNodeInterface {
                 responseBuilder.setErrorMessage("File " + fileName + " has been created by another thread");
                 ProtoHDFS.Response response = responseBuilder.buildPartial();
                 responseBuilder.clear();
+                this.requestsFulfilled.replace(requestId, true);
                 return response.toByteArray();
             }
         }
@@ -179,7 +216,6 @@ public class NameNode implements NameNodeInterface {
                     .collect(Collectors.toCollection(ArrayList::new));
             Collections.shuffle(dataNodesList);
             List<ProtoHDFS.NodeMeta> selectedDataNodes = activeDataNodes.subList(0, repFactor);
-
 
             for(int j = 0; j < repFactor; j++){
                 ProtoHDFS.BlockMeta.Builder blockMetaBuilder = ProtoHDFS.BlockMeta.newBuilder();
@@ -221,7 +257,7 @@ public class NameNode implements NameNodeInterface {
         responseBuilder.setErrorMessage("File handle for " + fileName + " created successfully");
         ProtoHDFS.Response response = responseBuilder.buildPartial();
         responseBuilder.clear();
-
+        this.requestsFulfilled.replace(requestId, true);
         return response.toByteArray();
     }
 
@@ -229,6 +265,9 @@ public class NameNode implements NameNodeInterface {
     public byte[] list(byte[] inp) throws RemoteException, InvalidProtocolBufferException {
         ProtoHDFS.Request request = ProtoHDFS.Request.parseFrom(inp);
         String requestId = request.getRequestId();
+        if(!this.requestsFulfilled.containsKey(requestId) || !this.requestsFulfilled.get(requestId)){
+            this.requestsFulfilled.putIfAbsent(requestId, false);
+        }
 
         Enumeration<String> fileKeys = this.fileHandles.keys();
         List<String> fileKeysList = Collections.list(fileKeys);
@@ -242,6 +281,7 @@ public class NameNode implements NameNodeInterface {
         ProtoHDFS.ListResponse listResponse = listResponseBuilder.build();
         listResponseBuilder.clear();
 
+        this.requestsFulfilled.replace(requestId, true);
         return listResponse.toByteArray();
     }
 

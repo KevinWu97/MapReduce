@@ -14,8 +14,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class Client {
-    public DataNodeInterface dataStub;
-    public NameNodeInterface nameStub;
 
     public Client(){
         // Put stuff here later
@@ -80,7 +78,10 @@ public class Client {
 
             NameNodeInterface nameStub = getNameStub(nameId, nameIp, port);
             // OPEN file handle using name node
-            byte[] openResponseBytes = nameStub.openFile(openRequest.toByteArray());
+            byte[] openResponseBytes = null;
+            while(openResponseBytes == null){
+                openResponseBytes = nameStub.openFile(openRequest.toByteArray());
+            }
 
             ProtoHDFS.Response openResponse = ProtoHDFS.Response.parseFrom(openResponseBytes);
             String responseId = openResponse.getResponseId();
@@ -147,7 +148,10 @@ public class Client {
             requestBuilder.clear();
 
             // CLOSE file handle here
-            byte[] closeResponseBytes = nameStub.closeFile(closeRequest.toByteArray());
+            byte[] closeResponseBytes = null;
+            while(closeResponseBytes == null){
+                closeResponseBytes = nameStub.closeFile(closeRequest.toByteArray());
+            }
             ProtoHDFS.Response closeResponse = ProtoHDFS.Response.parseFrom(closeResponseBytes);
 
             String closeResponseId = closeResponse.getResponseId();
@@ -184,7 +188,7 @@ public class Client {
         try{
             ProtoHDFS.Request.Builder requestBuilder = ProtoHDFS.Request.newBuilder();
             if(file.exists() || file.createNewFile()){
-                FileOutputStream fileOutputStream = new FileOutputStream(file);
+                FileOutputStream fileOutputStream = new FileOutputStream(file, true);
 
                 ProtoHDFS.FileHandle.Builder fileHandleBuilder = ProtoHDFS.FileHandle.newBuilder();
                 fileHandleBuilder.setFileName(fileName);
@@ -205,31 +209,70 @@ public class Client {
                 int port = 1099;
 
                 NameNodeInterface nameStub = getNameStub(nameId, nameIp, port);
-                byte[] openResponseBytes = nameStub.openFile(openRequest.toByteArray());
+                byte[] openResponseBytes = null;
+                while(openResponseBytes == null){
+                    openResponseBytes = nameStub.openFile(openRequest.toByteArray());
+                }
 
                 ProtoHDFS.Response openResponse = ProtoHDFS.Response.parseFrom(openResponseBytes);
                 String openResponseId = openResponse.getResponseId();
                 ProtoHDFS.Response.ResponseType openResponseType = openResponse.getResponseType();
-                fileHandle = openResponse.getFileHandle();
 
-                List<ProtoHDFS.Pipeline> pipelines = fileHandle.getPipelinesList();
-                ArrayList<List<ProtoHDFS.Block>> blocksList = pipelines.stream()
-                        .map(ProtoHDFS.Pipeline::getBlocksList)
-                        .collect(Collectors.toCollection(ArrayList::new));
-                boolean hasMissingBlock = blocksList.parallelStream().anyMatch(List::isEmpty);
-
-                if(hasMissingBlock){
-                    // If the list of block replicas is empty for any of the blocks, immediately throw an error
-                    // Maybe toss out the file as well since it's corrupted?
-                }else{
-                    ArrayList<ProtoHDFS.Block> readBlocks = blocksList.stream()
-                            .map(p -> p.get(0))
+                if(openResponseType == ProtoHDFS.Response.ResponseType.SUCCESS){
+                    // If file successfully opened, read the file
+                    fileHandle = openResponse.getFileHandle();
+                    List<ProtoHDFS.Pipeline> pipelines = fileHandle.getPipelinesList();
+                    ArrayList<List<ProtoHDFS.Block>> repsList = pipelines.stream()
+                            .map(ProtoHDFS.Pipeline::getBlocksList)
                             .collect(Collectors.toCollection(ArrayList::new));
-                    // Writes the contents from a copy of each block into the fileOutputStream
-                    for (ProtoHDFS.Block b : readBlocks) {
-                        byte[] bytes = b.getBlockContents().getBytes();
-                        fileOutputStream.write(bytes);
+                    boolean hasMissingBlock = repsList.parallelStream().anyMatch(List::isEmpty);
+
+                    // Need to fix here. Doesn't actually read the block
+                    if(hasMissingBlock){
+                        System.out.println("Error: File " + fileName + " corrupted!");
+                    }else{
+                        // Get list of blocks. Then send read request to the data nodes containing each block
+                        List<ProtoHDFS.Block> blockList = repsList.stream()
+                                .map(blocks -> blocks.get(0))
+                                .collect(Collectors.toCollection(ArrayList::new));
+                        for(ProtoHDFS.Block b : blockList){
+                            String readRequestId = UUID.randomUUID().toString();
+                            requestBuilder.setRequestId(readRequestId);
+                            requestBuilder.setRequestType(ProtoHDFS.Request.RequestType.READ);
+                            requestBuilder.addBlock(b);
+                            ProtoHDFS.Request readRequest = requestBuilder.buildPartial();
+                            requestBuilder.clear();
+
+                            String dataId = b.getBlockMeta().getDataId();
+                            String dataIp = b.getBlockMeta().getDataIp();
+                            int dataPort = b.getBlockMeta().getPort();
+
+                            DataNodeInterface dataNodeInterface = getDataStub(dataId, dataIp, dataPort);
+                            byte[] readResponseBytes = null;
+                            while(readResponseBytes == null){
+                                readResponseBytes = dataNodeInterface.readBlock(readRequest.toByteArray());
+                            }
+
+                            ProtoHDFS.Response readResponse = ProtoHDFS.Response.parseFrom(readResponseBytes);
+                            String readResponseId = readResponse.getResponseId();
+                            ProtoHDFS.Response.ResponseType readResponseType = readResponse.getResponseType();
+
+                            if(readResponseType == ProtoHDFS.Response.ResponseType.SUCCESS){
+                                String blockContents = readResponse.getBlock().getBlockContents();
+                                fileOutputStream.write(blockContents.getBytes());
+                            }else{
+                                System.out.println("Error, failed to read file blocks!");
+                                if(file.delete()){
+                                    System.out.println("File to read to has been deleted!");
+                                }else{
+                                    System.out.println("File to read to also failed to delete!");
+                                }
+                            }
+                        }
                     }
+                }else{
+                    // If file failed to open, print error message
+                    System.out.println("Failed to open file handle to " + fileName);
                 }
 
                 // Now send a close request to close (or unlock) the other file handle so other threads can use it
@@ -274,7 +317,10 @@ public class Client {
             int port = 1099;
 
             NameNodeInterface nameStub = getNameStub(nameId, nameIp, port);
-            byte[] listResponseBytes = nameStub.list(listRequest.toByteArray());
+            byte[] listResponseBytes = null;
+            while(listResponseBytes == null){
+                listResponseBytes = nameStub.list(listRequest.toByteArray());
+            }
             ProtoHDFS.ListResponse listResponse = ProtoHDFS.ListResponse.parseFrom(listResponseBytes);
             String listResponseId = listResponse.getResponseId();
             ProtoHDFS.ListResponse.ResponseType listResponseType = listResponse.getResponseType();
@@ -285,7 +331,8 @@ public class Client {
                 //noinspection SimplifyStreamApiCallChains
                 filesList.stream().forEach(System.out :: println);
             }else{
-                System.out.println(listResponse.getErrorMessage());
+                // Shouldn't really happen
+                System.out.println("list operation failed");
             }
         }catch(Exception e){
             if(e instanceof RemoteException){

@@ -30,6 +30,12 @@ public class DataNode implements DataNodeInterface {
         ProtoHDFS.Request request = ProtoHDFS.Request.parseFrom(inp);
         String requestId = request.getRequestId();
 
+        // If request has never been made before or hasn't been fulfilled, read the block
+        // If the request has been fulfilled already, just do the operation again since it's just a read operation
+        if(!this.requestsFulfilled.containsKey(requestId) || !this.requestsFulfilled.get(requestId)){
+            this.requestsFulfilled.putIfAbsent(requestId, false);
+        }
+
         // A request sent to readBlocks should only contain a block list consisting of a single block
         List<ProtoHDFS.Block> requestBlockList = request.getBlockList();
         LinkedList<ProtoHDFS.Block> blockList = new LinkedList<>(requestBlockList);
@@ -61,6 +67,7 @@ public class DataNode implements DataNodeInterface {
             ProtoHDFS.Response response = responseBuilder.buildPartial();
             responseBuilder.clear();
 
+            this.requestsFulfilled.replace(requestId, true);
             return response.toByteArray();
         }else{
             ProtoHDFS.Response.Builder responseBuilder = ProtoHDFS.Response.newBuilder();
@@ -71,6 +78,7 @@ public class DataNode implements DataNodeInterface {
             ProtoHDFS.Response response = responseBuilder.buildPartial();
             responseBuilder.clear();
 
+            this.requestsFulfilled.replace(requestId, true);
             return response.toByteArray();
         }
     }
@@ -80,6 +88,11 @@ public class DataNode implements DataNodeInterface {
         ProtoHDFS.Request request = ProtoHDFS.Request.parseFrom(inp);
         String requestId = request.getRequestId();
         ProtoHDFS.Request.RequestType requestType = request.getRequestType();
+        // If request has never been made before or hasn't been fulfilled, read the block
+        // If the request has been fulfilled already, just do the operation again since it's just a read operation
+        if(!this.requestsFulfilled.containsKey(requestId) || !this.requestsFulfilled.get(requestId)){
+            this.requestsFulfilled.putIfAbsent(requestId, false);
+        }
 
         // Make the replication factor configurable later
         int repFactor = 3;
@@ -99,6 +112,8 @@ public class DataNode implements DataNodeInterface {
             // if the number of replicas is not enough
             ProtoHDFS.Request.Builder requestBuilder = ProtoHDFS.Request.newBuilder();
             String replicateRequestId = UUID.randomUUID().toString();
+            this.requestsFulfilled.putIfAbsent(replicateRequestId, false);
+
             requestBuilder.setRequestId(replicateRequestId);
             requestBuilder.setRequestType(requestType);
             requestBuilder.addAllBlock(blockList);
@@ -109,7 +124,23 @@ public class DataNode implements DataNodeInterface {
             String dataNodeIp = blockMeta.getDataIp();
             int dataPort = blockMeta.getPort();
             DataNodeInterface dataStub = getDNStub(dataNodeId, dataNodeIp, dataPort);
-            dataStub.writeBlock(replicateRequest.toByteArray());
+
+            byte[] replicateResponseBytes = null;
+            while(replicateResponseBytes == null){
+                replicateResponseBytes = dataStub.writeBlock(replicateRequest.toByteArray());
+            }
+
+            this.requestsFulfilled.replace(replicateRequestId, true);
+            ProtoHDFS.Response replicateResponse = ProtoHDFS.Response.parseFrom(replicateResponseBytes);
+            ProtoHDFS.Response.ResponseType repStatus = replicateResponse.getResponseType();
+            if(repStatus == ProtoHDFS.Response.ResponseType.FAILURE){
+                ProtoHDFS.Response.Builder responseBuilder = ProtoHDFS.Response.newBuilder();
+                responseBuilder.setResponseId(requestId);
+                responseBuilder.setErrorMessage("Failed to replicate block");
+                ProtoHDFS.Response response = responseBuilder.buildPartial();
+                responseBuilder.clear();
+                return response.toByteArray();
+            }
         }
 
         String blockName = fileName + "_" + blockNumber + "_" + repNumber;
@@ -120,6 +151,15 @@ public class DataNode implements DataNodeInterface {
             fileOutputStream.write(blockContents.getBytes());
             fileOutputStream.flush();
             fileOutputStream.close();
+        }else{
+            ProtoHDFS.Response.Builder responseBuilder = ProtoHDFS.Response.newBuilder();
+            responseBuilder.setResponseId(requestId);
+            responseBuilder.setErrorMessage("Failed to write block to data node");
+            ProtoHDFS.Response response = responseBuilder.buildPartial();
+            responseBuilder.clear();
+
+            this.requestsFulfilled.replace(requestId, true);
+            return response.toByteArray();
         }
 
         ProtoHDFS.Response.Builder responseBuilder = ProtoHDFS.Response.newBuilder();
@@ -129,6 +169,8 @@ public class DataNode implements DataNodeInterface {
                 blockNumber, repNumber, fileName));
         ProtoHDFS.Response response = responseBuilder.buildPartial();
         responseBuilder.clear();
+
+        this.requestsFulfilled.replace(requestId, true);
         return response.toByteArray();
     }
 
@@ -140,7 +182,7 @@ public class DataNode implements DataNodeInterface {
             DataNodeInterface dataNodeStub = (DataNodeInterface) UnicastRemoteObject.exportObject(this, 0);
 
             // This sets the IP address of this particular Data Node instance
-            System.setProperty("java.rmi.server.hostname", dataIp);
+            // System.setProperty("java.rmi.server.hostname", dataIp);
 
             // This gets reference to remote object registry located at the specified port
             Registry registry = LocateRegistry.getRegistry(dataIp, dataPort);
