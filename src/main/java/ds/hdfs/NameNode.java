@@ -18,6 +18,14 @@ public class NameNode implements NameNodeInterface {
     protected String nameId;
     protected String nameIp;
     protected int port;
+    
+    
+    //Hashmap
+    private HashMap<String, Boolean> map_heartbeat;
+    
+    private Namenode() {
+         map_heartbeat = new HashMap<>();
+    }
 
     @Override
     public byte[] openFile(byte[] inp) throws RemoteException, InvalidProtocolBufferException {
@@ -256,7 +264,6 @@ public class NameNode implements NameNodeInterface {
     while(true)
     {
     try{
-
         ProtoHDFS.Heartbeat heartbeat = ProtoHDFS.Heartbeat.parseFrom(inp);
      }catch (InvalidProtocolBufferException e) {
     
@@ -267,7 +274,8 @@ public class NameNode implements NameNodeInterface {
   
     //send heartbeat
     datastub.heartbeat();
-
+    map_heartbeat.put("Heartbeat Recieved", true);
+       
   }
 
   return null;
