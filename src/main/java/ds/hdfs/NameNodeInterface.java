@@ -2,13 +2,14 @@ package ds.hdfs;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
+import java.io.IOException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
 public interface NameNodeInterface extends Remote {
 
     /* Method to open a file given file name with read-write flag*/
-    byte[] openFile(byte[] inp) throws RemoteException, InvalidProtocolBufferException;
+    byte[] openFile(byte[] inp) throws IOException;
 
     byte[] closeFile(byte[] inp) throws RemoteException, InvalidProtocolBufferException;
 
@@ -16,7 +17,7 @@ public interface NameNodeInterface extends Remote {
     byte[] getBlockLocations(byte[] inp) throws RemoteException, InvalidProtocolBufferException;
 
     /* Method to assign a block which will return the replicated block locations */
-    byte[] assignBlock(byte[] inp) throws RemoteException, InvalidProtocolBufferException;
+    byte[] assignBlock(byte[] inp) throws IOException;
 
     /* List the file names (no directories needed for current implementation */
     byte[] list(byte[] inp) throws RemoteException, InvalidProtocolBufferException;

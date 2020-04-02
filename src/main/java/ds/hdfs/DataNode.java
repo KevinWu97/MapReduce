@@ -120,7 +120,12 @@ public class DataNode extends UnicastRemoteObject implements DataNodeInterface {
         }
 
         // Make the replication factor configurable later
-        int repFactor = 3;
+        Properties hdfsProp = new Properties();
+        File hdfsPropFile = new File("hdfs.properties");
+        FileInputStream hdfsPropInputStream = new FileInputStream(hdfsPropFile);
+        hdfsProp.load(hdfsPropInputStream);
+
+        int repFactor = Integer.parseInt(hdfsProp.getProperty("rep_factor", "3"));
         List<ProtoHDFS.Block> requestBlockList = request.getBlockList();
         LinkedList<ProtoHDFS.Block> blockList = new LinkedList<>(requestBlockList);
 
@@ -236,8 +241,8 @@ public class DataNode extends UnicastRemoteObject implements DataNodeInterface {
             System.out.println("Data Node " + dataNodeId + " is running on host " + dataNodeIp + " port " + dataPort);
 
             // Gets the file handle to the namenode.properties file
-            File file = new File("namenode.properties");
-            FileInputStream fileInputStream = new FileInputStream(file);
+            File propFile = new File("namenode.properties");
+            FileInputStream fileInputStream = new FileInputStream(propFile);
             prop.load(fileInputStream);
 
             String nameNodeId = prop.getProperty("server_name");

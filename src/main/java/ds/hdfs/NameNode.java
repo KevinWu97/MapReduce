@@ -4,7 +4,9 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import proto.ProtoHDFS;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -38,7 +40,7 @@ public class NameNode extends UnicastRemoteObject implements NameNodeInterface {
     }
 
     @Override
-    public byte[] openFile(byte[] inp) throws RemoteException, InvalidProtocolBufferException {
+    public byte[] openFile(byte[] inp) throws IOException {
         ProtoHDFS.Request request = ProtoHDFS.Request.parseFrom(inp);
         String requestId = request.getRequestId();
         ProtoHDFS.Request.RequestType operation = request.getRequestType();
@@ -171,7 +173,7 @@ public class NameNode extends UnicastRemoteObject implements NameNodeInterface {
     }
 
     @Override
-    public byte[] assignBlock(byte[] inp) throws RemoteException, InvalidProtocolBufferException {
+    public byte[] assignBlock(byte[] inp) throws IOException {
         // To assign blocks, we first get the number of blocks that will be needed
         // For each block we create a "pipeline" of Data Nodes where the blocks are written to and replicated
         ProtoHDFS.Request request = ProtoHDFS.Request.parseFrom(inp);
@@ -207,8 +209,13 @@ public class NameNode extends UnicastRemoteObject implements NameNodeInterface {
         writeLock.lock();
 
         // Make block size and replication factor to be configurable later
-        int blockSize = 64000000;
-        int repFactor = 3;
+        Properties hdfsProp = new Properties();
+        File hdfsPropFile = new File("hdfs.properties");
+        FileInputStream hdfsPropInputStream = new FileInputStream(hdfsPropFile);
+        hdfsProp.load(hdfsPropInputStream);
+
+        int blockSize = Integer.parseInt(hdfsProp.getProperty("block_size", "64000000"));
+        int repFactor = Integer.parseInt(hdfsProp.getProperty("rep_factor", "3"));
         int numBlocks = (int) (fileSize / blockSize + 1);
 
         ProtoHDFS.FileHandle.Builder fileHandleBuilder = ProtoHDFS.FileHandle.newBuilder();

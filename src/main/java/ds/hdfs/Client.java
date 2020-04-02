@@ -7,16 +7,13 @@ import java.io.*;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class Client {
 
     public Client(){
-        
+
     }
 
     public static DataNodeInterface getDataStub(String dataId, String dataIp, int port){
@@ -43,8 +40,23 @@ public class Client {
         File file = new File(localFile);
 
         try{
-            // Make block size configurable later
-            int blockSize = 64000000;
+            // Gets the file handle to the namenode.properties file
+            Properties prop = new Properties();
+            File propFile = new File("namenode.properties");
+            FileInputStream propFileInputStream = new FileInputStream(propFile);
+            prop.load(propFileInputStream);
+
+            String nameId = prop.getProperty("server_name");
+            String nameIp = prop.getProperty("server_ip");
+            int port = Integer.parseInt(prop.getProperty("server_port"));
+
+            // Get block size from prop file
+            Properties hdfsProp = new Properties();
+            File hdfsPropFile = new File("hdfs.properties");
+            FileInputStream hdfsPropInputStream = new FileInputStream(hdfsPropFile);
+            hdfsProp.load(hdfsPropInputStream);
+
+            int blockSize = Integer.parseInt(hdfsProp.getProperty("block_size", "64000000"));
             int numBlocks = (int) (file.length() / blockSize + 1);
             ArrayList<byte[]> blocks = new ArrayList<>();
 
@@ -71,11 +83,6 @@ public class Client {
             requestBuilder.setFileHandle(fileHandle);
             ProtoHDFS.Request openRequest = requestBuilder.buildPartial();
             requestBuilder.clear();
-
-            // Read these variables from the config file later
-            String nameId = "namenode";
-            String nameIp = "192.168.12.75";
-            int port = 1099;
 
             NameNodeInterface nameStub = getNameStub(nameId, nameIp, port);
             // OPEN file handle using name node
@@ -117,14 +124,18 @@ public class Client {
                     ProtoHDFS.Request writeBlockRequest = requestBuilder.buildPartial();
                     requestBuilder.clear();
 
-                    // Configure these variables later
-                    String dataId = "data1";
-                    String dataIp = "192.168.12.1";
-                    int dataPort = 1099;
+                    // Send request to first data node of in the pipeline
+                    ProtoHDFS.BlockMeta firstBlockMeta = requestBlocks.get(0).getBlockMeta();
+                    String dataId = firstBlockMeta.getDataId();
+                    String dataIp = firstBlockMeta.getDataIp();
+                    int dataPort = firstBlockMeta.getPort();
 
                     // WRITE to the data nodes
+                    byte[] writeResponseBytes = null;
                     DataNodeInterface dataStub = getDataStub(dataId, dataIp, dataPort);
-                    byte[] writeResponseBytes = dataStub.writeBlock(writeBlockRequest.toByteArray());
+                    while(writeResponseBytes == null){
+                        writeResponseBytes = dataStub.writeBlock(writeBlockRequest.toByteArray());
+                    }
 
                     ProtoHDFS.Response writeResponse = ProtoHDFS.Response.parseFrom(writeResponseBytes);
                     String writeResponseId = writeResponse.getResponseId();
@@ -189,6 +200,17 @@ public class Client {
 
         try{
             ProtoHDFS.Request.Builder requestBuilder = ProtoHDFS.Request.newBuilder();
+
+            // Gets the file handle to the namenode.properties file
+            Properties prop = new Properties();
+            File propFile = new File("namenode.properties");
+            FileInputStream propFileInputStream = new FileInputStream(propFile);
+            prop.load(propFileInputStream);
+
+            String nameId = prop.getProperty("server_name");
+            String nameIp = prop.getProperty("server_ip");
+            int port = Integer.parseInt(prop.getProperty("server_port"));
+
             if(file.exists() || file.createNewFile()){
                 FileOutputStream fileOutputStream = new FileOutputStream(file, true);
 
@@ -204,11 +226,6 @@ public class Client {
                 requestBuilder.setFileHandle(fileHandle);
                 ProtoHDFS.Request openRequest = requestBuilder.buildPartial();
                 requestBuilder.clear();
-
-                // Configure these values later
-                String nameId = "namenode";
-                String nameIp = "192.168.12.75";
-                int port = 1099;
 
                 NameNodeInterface nameStub = getNameStub(nameId, nameIp, port);
                 byte[] openResponseBytes = null;
@@ -313,10 +330,15 @@ public class Client {
             ProtoHDFS.Request listRequest = listRequestBuilder.buildPartial();
             listRequestBuilder.clear();
 
-            // Read these variables from the config file later
-            String nameId = "namenode";
-            String nameIp = "192.168.12.75";
-            int port = 1099;
+            // Gets the file handle to the namenode.properties file
+            Properties prop = new Properties();
+            File propFile = new File("namenode.properties");
+            FileInputStream propFileInputStream = new FileInputStream(propFile);
+            prop.load(propFileInputStream);
+
+            String nameId = prop.getProperty("server_name");
+            String nameIp = prop.getProperty("server_ip");
+            int port = Integer.parseInt(prop.getProperty("server_port"));
 
             NameNodeInterface nameStub = getNameStub(nameId, nameIp, port);
             byte[] listResponseBytes = null;
