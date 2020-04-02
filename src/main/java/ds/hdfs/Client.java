@@ -381,9 +381,6 @@ public class Client {
                 case "get":
                     getFile(args[0], args[1]);
                     break;
-                case "delete":
-                    // Coming soon :)
-                    break;
                 case "list":
                     list();
                     break;
