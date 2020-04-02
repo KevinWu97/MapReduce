@@ -10889,31 +10889,31 @@ public final class ProtoHDFS {
         getDataIdBytes();
 
         /**
-         * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+         * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
          */
-        java.util.List<proto.ProtoHDFS.Block>
+        java.util.List<proto.ProtoHDFS.BlockMeta>
         getDataNodeBlocksList();
 
         /**
-         * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+         * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
          */
-        proto.ProtoHDFS.Block getDataNodeBlocks(int index);
+        proto.ProtoHDFS.BlockMeta getDataNodeBlocks(int index);
 
         /**
-         * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+         * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
          */
         int getDataNodeBlocksCount();
 
         /**
-         * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+         * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
          */
-        java.util.List<? extends proto.ProtoHDFS.BlockOrBuilder>
+        java.util.List<? extends proto.ProtoHDFS.BlockMetaOrBuilder>
         getDataNodeBlocksOrBuilderList();
 
         /**
-         * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+         * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
          */
-        proto.ProtoHDFS.BlockOrBuilder getDataNodeBlocksOrBuilder(
+        proto.ProtoHDFS.BlockMetaOrBuilder getDataNodeBlocksOrBuilder(
                 int index);
     }
 
@@ -10976,11 +10976,11 @@ public final class ProtoHDFS {
                         }
                         case 18: {
                             if (!((mutable_bitField0_ & 0x00000002) != 0)) {
-                                dataNodeBlocks_ = new java.util.ArrayList<proto.ProtoHDFS.Block>();
+                                dataNodeBlocks_ = new java.util.ArrayList<proto.ProtoHDFS.BlockMeta>();
                                 mutable_bitField0_ |= 0x00000002;
                             }
                             dataNodeBlocks_.add(
-                                    input.readMessage(proto.ProtoHDFS.Block.PARSER, extensionRegistry));
+                                    input.readMessage(proto.ProtoHDFS.BlockMeta.PARSER, extensionRegistry));
                             break;
                         }
                         default: {
@@ -11072,41 +11072,41 @@ public final class ProtoHDFS {
         }
 
         public static final int DATANODEBLOCKS_FIELD_NUMBER = 2;
-        private java.util.List<proto.ProtoHDFS.Block> dataNodeBlocks_;
+        private java.util.List<proto.ProtoHDFS.BlockMeta> dataNodeBlocks_;
 
         /**
-         * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+         * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
          */
-        public java.util.List<proto.ProtoHDFS.Block> getDataNodeBlocksList() {
+        public java.util.List<proto.ProtoHDFS.BlockMeta> getDataNodeBlocksList() {
             return dataNodeBlocks_;
         }
 
         /**
-         * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+         * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
          */
-        public java.util.List<? extends proto.ProtoHDFS.BlockOrBuilder>
+        public java.util.List<? extends proto.ProtoHDFS.BlockMetaOrBuilder>
         getDataNodeBlocksOrBuilderList() {
             return dataNodeBlocks_;
         }
 
         /**
-         * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+         * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
          */
         public int getDataNodeBlocksCount() {
             return dataNodeBlocks_.size();
         }
 
         /**
-         * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+         * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
          */
-        public proto.ProtoHDFS.Block getDataNodeBlocks(int index) {
+        public proto.ProtoHDFS.BlockMeta getDataNodeBlocks(int index) {
             return dataNodeBlocks_.get(index);
         }
 
         /**
-         * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+         * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
          */
-        public proto.ProtoHDFS.BlockOrBuilder getDataNodeBlocksOrBuilder(
+        public proto.ProtoHDFS.BlockMetaOrBuilder getDataNodeBlocksOrBuilder(
                 int index) {
             return dataNodeBlocks_.get(index);
         }
@@ -11622,23 +11622,23 @@ public final class ProtoHDFS {
                 return this;
             }
 
-            private java.util.List<proto.ProtoHDFS.Block> dataNodeBlocks_ =
+            private java.util.List<proto.ProtoHDFS.BlockMeta> dataNodeBlocks_ =
                     java.util.Collections.emptyList();
 
             private void ensureDataNodeBlocksIsMutable() {
                 if (!((bitField0_ & 0x00000002) != 0)) {
-                    dataNodeBlocks_ = new java.util.ArrayList<proto.ProtoHDFS.Block>(dataNodeBlocks_);
+                    dataNodeBlocks_ = new java.util.ArrayList<proto.ProtoHDFS.BlockMeta>(dataNodeBlocks_);
                     bitField0_ |= 0x00000002;
                 }
             }
 
             private com.google.protobuf.RepeatedFieldBuilderV3<
-                    proto.ProtoHDFS.Block, proto.ProtoHDFS.Block.Builder, proto.ProtoHDFS.BlockOrBuilder> dataNodeBlocksBuilder_;
+                    proto.ProtoHDFS.BlockMeta, proto.ProtoHDFS.BlockMeta.Builder, proto.ProtoHDFS.BlockMetaOrBuilder> dataNodeBlocksBuilder_;
 
             /**
-             * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+             * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
              */
-            public java.util.List<proto.ProtoHDFS.Block> getDataNodeBlocksList() {
+            public java.util.List<proto.ProtoHDFS.BlockMeta> getDataNodeBlocksList() {
                 if (dataNodeBlocksBuilder_ == null) {
                     return java.util.Collections.unmodifiableList(dataNodeBlocks_);
                 } else {
@@ -11647,7 +11647,7 @@ public final class ProtoHDFS {
             }
 
             /**
-             * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+             * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
              */
             public int getDataNodeBlocksCount() {
                 if (dataNodeBlocksBuilder_ == null) {
@@ -11658,9 +11658,9 @@ public final class ProtoHDFS {
             }
 
             /**
-             * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+             * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
              */
-            public proto.ProtoHDFS.Block getDataNodeBlocks(int index) {
+            public proto.ProtoHDFS.BlockMeta getDataNodeBlocks(int index) {
                 if (dataNodeBlocksBuilder_ == null) {
                     return dataNodeBlocks_.get(index);
                 } else {
@@ -11669,10 +11669,10 @@ public final class ProtoHDFS {
             }
 
             /**
-             * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+             * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
              */
             public Builder setDataNodeBlocks(
-                    int index, proto.ProtoHDFS.Block value) {
+                    int index, proto.ProtoHDFS.BlockMeta value) {
                 if (dataNodeBlocksBuilder_ == null) {
                     if (value == null) {
                         throw new NullPointerException();
@@ -11687,10 +11687,10 @@ public final class ProtoHDFS {
             }
 
             /**
-             * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+             * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
              */
             public Builder setDataNodeBlocks(
-                    int index, proto.ProtoHDFS.Block.Builder builderForValue) {
+                    int index, proto.ProtoHDFS.BlockMeta.Builder builderForValue) {
                 if (dataNodeBlocksBuilder_ == null) {
                     ensureDataNodeBlocksIsMutable();
                     dataNodeBlocks_.set(index, builderForValue.build());
@@ -11702,9 +11702,9 @@ public final class ProtoHDFS {
             }
 
             /**
-             * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+             * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
              */
-            public Builder addDataNodeBlocks(proto.ProtoHDFS.Block value) {
+            public Builder addDataNodeBlocks(proto.ProtoHDFS.BlockMeta value) {
                 if (dataNodeBlocksBuilder_ == null) {
                     if (value == null) {
                         throw new NullPointerException();
@@ -11719,10 +11719,10 @@ public final class ProtoHDFS {
             }
 
             /**
-             * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+             * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
              */
             public Builder addDataNodeBlocks(
-                    int index, proto.ProtoHDFS.Block value) {
+                    int index, proto.ProtoHDFS.BlockMeta value) {
                 if (dataNodeBlocksBuilder_ == null) {
                     if (value == null) {
                         throw new NullPointerException();
@@ -11737,10 +11737,10 @@ public final class ProtoHDFS {
             }
 
             /**
-             * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+             * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
              */
             public Builder addDataNodeBlocks(
-                    proto.ProtoHDFS.Block.Builder builderForValue) {
+                    proto.ProtoHDFS.BlockMeta.Builder builderForValue) {
                 if (dataNodeBlocksBuilder_ == null) {
                     ensureDataNodeBlocksIsMutable();
                     dataNodeBlocks_.add(builderForValue.build());
@@ -11752,10 +11752,10 @@ public final class ProtoHDFS {
             }
 
             /**
-             * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+             * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
              */
             public Builder addDataNodeBlocks(
-                    int index, proto.ProtoHDFS.Block.Builder builderForValue) {
+                    int index, proto.ProtoHDFS.BlockMeta.Builder builderForValue) {
                 if (dataNodeBlocksBuilder_ == null) {
                     ensureDataNodeBlocksIsMutable();
                     dataNodeBlocks_.add(index, builderForValue.build());
@@ -11767,10 +11767,10 @@ public final class ProtoHDFS {
             }
 
             /**
-             * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+             * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
              */
             public Builder addAllDataNodeBlocks(
-                    java.lang.Iterable<? extends proto.ProtoHDFS.Block> values) {
+                    java.lang.Iterable<? extends proto.ProtoHDFS.BlockMeta> values) {
                 if (dataNodeBlocksBuilder_ == null) {
                     ensureDataNodeBlocksIsMutable();
                     com.google.protobuf.AbstractMessageLite.Builder.addAll(
@@ -11783,7 +11783,7 @@ public final class ProtoHDFS {
             }
 
             /**
-             * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+             * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
              */
             public Builder clearDataNodeBlocks() {
                 if (dataNodeBlocksBuilder_ == null) {
@@ -11797,7 +11797,7 @@ public final class ProtoHDFS {
             }
 
             /**
-             * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+             * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
              */
             public Builder removeDataNodeBlocks(int index) {
                 if (dataNodeBlocksBuilder_ == null) {
@@ -11811,17 +11811,17 @@ public final class ProtoHDFS {
             }
 
             /**
-             * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+             * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
              */
-            public proto.ProtoHDFS.Block.Builder getDataNodeBlocksBuilder(
+            public proto.ProtoHDFS.BlockMeta.Builder getDataNodeBlocksBuilder(
                     int index) {
                 return getDataNodeBlocksFieldBuilder().getBuilder(index);
             }
 
             /**
-             * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+             * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
              */
-            public proto.ProtoHDFS.BlockOrBuilder getDataNodeBlocksOrBuilder(
+            public proto.ProtoHDFS.BlockMetaOrBuilder getDataNodeBlocksOrBuilder(
                     int index) {
                 if (dataNodeBlocksBuilder_ == null) {
                     return dataNodeBlocks_.get(index);
@@ -11831,9 +11831,9 @@ public final class ProtoHDFS {
             }
 
             /**
-             * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+             * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
              */
-            public java.util.List<? extends proto.ProtoHDFS.BlockOrBuilder>
+            public java.util.List<? extends proto.ProtoHDFS.BlockMetaOrBuilder>
             getDataNodeBlocksOrBuilderList() {
                 if (dataNodeBlocksBuilder_ != null) {
                     return dataNodeBlocksBuilder_.getMessageOrBuilderList();
@@ -11843,36 +11843,36 @@ public final class ProtoHDFS {
             }
 
             /**
-             * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+             * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
              */
-            public proto.ProtoHDFS.Block.Builder addDataNodeBlocksBuilder() {
+            public proto.ProtoHDFS.BlockMeta.Builder addDataNodeBlocksBuilder() {
                 return getDataNodeBlocksFieldBuilder().addBuilder(
-                        proto.ProtoHDFS.Block.getDefaultInstance());
+                        proto.ProtoHDFS.BlockMeta.getDefaultInstance());
             }
 
             /**
-             * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+             * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
              */
-            public proto.ProtoHDFS.Block.Builder addDataNodeBlocksBuilder(
+            public proto.ProtoHDFS.BlockMeta.Builder addDataNodeBlocksBuilder(
                     int index) {
                 return getDataNodeBlocksFieldBuilder().addBuilder(
-                        index, proto.ProtoHDFS.Block.getDefaultInstance());
+                        index, proto.ProtoHDFS.BlockMeta.getDefaultInstance());
             }
 
             /**
-             * <code>repeated .proto.Block dataNodeBlocks = 2;</code>
+             * <code>repeated .proto.BlockMeta dataNodeBlocks = 2;</code>
              */
-            public java.util.List<proto.ProtoHDFS.Block.Builder>
+            public java.util.List<proto.ProtoHDFS.BlockMeta.Builder>
             getDataNodeBlocksBuilderList() {
                 return getDataNodeBlocksFieldBuilder().getBuilderList();
             }
 
             private com.google.protobuf.RepeatedFieldBuilderV3<
-                    proto.ProtoHDFS.Block, proto.ProtoHDFS.Block.Builder, proto.ProtoHDFS.BlockOrBuilder>
+                    proto.ProtoHDFS.BlockMeta, proto.ProtoHDFS.BlockMeta.Builder, proto.ProtoHDFS.BlockMetaOrBuilder>
             getDataNodeBlocksFieldBuilder() {
                 if (dataNodeBlocksBuilder_ == null) {
                     dataNodeBlocksBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
-                            proto.ProtoHDFS.Block, proto.ProtoHDFS.Block.Builder, proto.ProtoHDFS.BlockOrBuilder>(
+                            proto.ProtoHDFS.BlockMeta, proto.ProtoHDFS.BlockMeta.Builder, proto.ProtoHDFS.BlockMetaOrBuilder>(
                             dataNodeBlocks_,
                             ((bitField0_ & 0x00000002) != 0),
                             getParentForChildren(),
@@ -12026,9 +12026,9 @@ public final class ProtoHDFS {
                         "UCCESS\020\000\022\013\n\007FAILURE\020\001\"0\n\010NodeMeta\022\n\n\002id\030" +
                         "\001 \002(\t\022\n\n\002ip\030\002 \002(\t\022\014\n\004port\030\003 \002(\005\"2\n\tHeart" +
                         "beat\022%\n\014dataNodeMeta\030\001 \002(\0132\017.proto.NodeM" +
-                        "eta\"C\n\013BlockReport\022\016\n\006dataId\030\001 \002(\t\022$\n\016da" +
-                        "taNodeBlocks\030\002 \003(\0132\014.proto.BlockB\013B\tProt" +
-                        "oHDFS"
+                        "eta\"G\n\013BlockReport\022\016\n\006dataId\030\001 \002(\t\022(\n\016da" +
+                        "taNodeBlocks\030\002 \003(\0132\020.proto.BlockMetaB\013B\t" +
+                        "ProtoHDFS"
         };
         descriptor = com.google.protobuf.Descriptors.FileDescriptor
                 .internalBuildGeneratedFileFrom(descriptorData,

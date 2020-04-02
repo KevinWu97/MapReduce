@@ -1,4 +1,5 @@
 target/*
 main/java/ds/hdfs/Test.java
+main/java/ds/hdfs/TestConnection.java
 outFile.txt
 randomFile.txt

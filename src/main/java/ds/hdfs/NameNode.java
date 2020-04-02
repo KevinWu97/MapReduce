@@ -3,8 +3,13 @@ package ds.hdfs;
 import com.google.protobuf.InvalidProtocolBufferException;
 import proto.ProtoHDFS;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.net.InetAddress;
 import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -12,17 +17,25 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
-public class NameNode implements NameNodeInterface {
+public class NameNode extends UnicastRemoteObject implements NameNodeInterface {
     protected Registry serverRegistry;
     protected ConcurrentHashMap<String, Boolean> requestsFulfilled;
     protected ConcurrentHashMap<String, ProtoHDFS.NodeMeta> dataNodeMetas;
     protected ConcurrentHashMap<String, Instant> heartbeatTimestamps;
-    protected ConcurrentHashMap<String, List<ProtoHDFS.Block>> dataNodeBlocks;
+    protected ConcurrentHashMap<String, List<ProtoHDFS.BlockMeta>> dataNodeBlockMetas;
     protected ConcurrentHashMap<String, ProtoHDFS.FileHandle> fileHandles;
     protected ConcurrentHashMap<String, ReentrantReadWriteLock> fileLocks;
     protected String nameId;
     protected String nameIp;
     protected int port;
+
+    protected NameNode() throws RemoteException {
+        super();
+    }
+
+    protected NameNode(int port) throws RemoteException {
+        super(port);
+    }
 
     @Override
     public byte[] openFile(byte[] inp) throws RemoteException, InvalidProtocolBufferException {
@@ -289,20 +302,20 @@ public class NameNode implements NameNodeInterface {
     public synchronized byte[] blockReport(byte[] inp) throws RemoteException, InvalidProtocolBufferException {
         ProtoHDFS.BlockReport blockReport = ProtoHDFS.BlockReport.parseFrom(inp);
         String dataId = blockReport.getDataId();
-        List<ProtoHDFS.Block> dataBlocks = blockReport.getDataNodeBlocksList();
+        List<ProtoHDFS.BlockMeta> dataBlockMetas = blockReport.getDataNodeBlocksList();
 
         ProtoHDFS.BlockMeta.Builder blockMetaBuilder = ProtoHDFS.BlockMeta.newBuilder();
         ProtoHDFS.Block.Builder blockBuilder = ProtoHDFS.Block.newBuilder();
 
-        for(ProtoHDFS.Block b : dataBlocks){
-            ProtoHDFS.BlockMeta bMeta = b.getBlockMeta();
-            String fileName = bMeta.getFileName();
-            int blockNumber = bMeta.getBlockNumber();
-            int repNumber = bMeta.getRepNumber();
-            String dataIp = bMeta.getDataIp();
-            int dataPort = bMeta.getPort();
+        for(ProtoHDFS.BlockMeta b : dataBlockMetas){
+            String fileName = b.getFileName();
+            int blockNumber = b.getBlockNumber();
+            int repNumber = b.getRepNumber();
+            String dataIp = b.getDataIp();
+            int dataPort = b.getPort();
 
-            if(!this.fileHandles.get(fileName).getPipelines(blockNumber).getBlocks(repNumber).isInitialized()){
+            if(!this.fileHandles.get(fileName).getPipelines(blockNumber).getBlocks(repNumber)
+                    .getBlockMeta().getInitialized()){
                 blockMetaBuilder.setFileName(fileName);
                 blockMetaBuilder.setBlockNumber(blockNumber);
                 blockMetaBuilder.setRepNumber(repNumber);
@@ -317,12 +330,11 @@ public class NameNode implements NameNodeInterface {
                 ProtoHDFS.Block newBlock = blockBuilder.buildPartial();
                 blockBuilder.clear();
 
-                // Sets block to initialized
                 this.fileHandles.get(fileName).getPipelines(blockNumber).getBlocksList().set(repNumber, newBlock);
             }
         }
 
-        this.dataNodeBlocks.replace(dataId, dataBlocks);
+        this.dataNodeBlockMetas.replace(dataId, dataBlockMetas);
 
         ProtoHDFS.NodeMeta.Builder nodeMetaBuilder = ProtoHDFS.NodeMeta.newBuilder();
         nodeMetaBuilder.setId(this.nameId);
@@ -358,6 +370,28 @@ public class NameNode implements NameNodeInterface {
     }
 
     public static void main(String[] args){
+        // Starts up the name node server and configures properties of the namenode
+        Properties props = new Properties();
+        File file = new File("namenode.properties");
+        try{
+            String nodeName = UUID.randomUUID().toString();
+            InetAddress inetAddress = InetAddress.getLocalHost();
+            String nodeIp = inetAddress.getHostAddress();
+            int nodePort = (args.length == 0) ? 1099 : Integer.parseInt(args[0]);
 
+            FileOutputStream fileOutputStream = new FileOutputStream(file);
+            props.setProperty("server_name", nodeName);
+            props.setProperty("server_ip", nodeIp);
+            props.setProperty("server_port", String.valueOf(nodePort));
+            props.store(fileOutputStream, null);
+
+            Registry serverRegistry = LocateRegistry.createRegistry(nodePort);
+            serverRegistry.bind(nodeName, (args.length == 0) ? new NameNode() : new NameNode(nodePort));
+
+            System.out.println("Name Node " + nodeName + " is running on host " + nodeIp + " port " + nodePort);
+
+        }catch(Exception e){
+            System.out.println("Error occurred when starting the Name Node: " + e.getMessage());
+        }
     }
 }

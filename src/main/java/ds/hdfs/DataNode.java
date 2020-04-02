@@ -3,8 +3,10 @@ package ds.hdfs;
 import proto.ProtoHDFS;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.rmi.NotBoundException;
@@ -14,16 +16,39 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
-public class DataNode implements DataNodeInterface {
+public class DataNode extends UnicastRemoteObject implements DataNodeInterface {
     // This data structure allows thread safe access to the blocks of this specific data node
     protected ConcurrentHashMap<String, Boolean> requestsFulfilled;
     protected ConcurrentHashMap<String, ProtoHDFS.BlockMeta> blockMetas;
+
     protected String dataId;
     protected String dataIp;
-    protected int port;
+    protected int dataPort;
+
+    protected DataNode(String dataId, String dataIp) throws RemoteException {
+        super();
+        this.dataId = dataId;
+        this.dataIp = dataIp;
+        this.dataPort = 1099;
+        this.requestsFulfilled = new ConcurrentHashMap<>();
+        this.blockMetas = new ConcurrentHashMap<>();
+    }
+
+    protected DataNode(String dataId, String dataIp, int port) throws RemoteException {
+        super(port);
+        this.dataId = dataId;
+        this.dataIp = dataIp;
+        this.dataPort = port;
+        this.requestsFulfilled = new ConcurrentHashMap<>();
+        this.blockMetas = new ConcurrentHashMap<>();
+    }
 
     @Override
     public byte[] readBlock(byte[] inp) throws IOException {
@@ -84,7 +109,7 @@ public class DataNode implements DataNodeInterface {
     }
 
     @Override
-    public byte[] writeBlock(byte[] inp) throws IOException {
+    public byte[] writeBlock(byte[] inp) throws IOException, NotBoundException {
         ProtoHDFS.Request request = ProtoHDFS.Request.parseFrom(inp);
         String requestId = request.getRequestId();
         ProtoHDFS.Request.RequestType requestType = request.getRequestType();
@@ -151,6 +176,8 @@ public class DataNode implements DataNodeInterface {
             fileOutputStream.write(blockContents.getBytes());
             fileOutputStream.flush();
             fileOutputStream.close();
+            blockMeta = blockMeta.toBuilder().setInitialized(true).build();
+            this.blockMetas.putIfAbsent(blockName, blockMeta);
         }else{
             ProtoHDFS.Response.Builder responseBuilder = ProtoHDFS.Response.newBuilder();
             responseBuilder.setResponseId(requestId);
@@ -174,60 +201,56 @@ public class DataNode implements DataNodeInterface {
         return response.toByteArray();
     }
 
-    // This method binds the Data Node to the server so the client can access it and use its services (methods)
-    public void bindServer(String dataId, String dataIp, int dataPort){
-        try{
-            // This is the stub which will be used to remotely invoke methods on another Data Node
-            // Initial value of the port is set to 0
-            DataNodeInterface dataNodeStub = (DataNodeInterface) UnicastRemoteObject.exportObject(this, 0);
-
-            // This sets the IP address of this particular Data Node instance
-            // System.setProperty("java.rmi.server.hostname", dataIp);
-
-            // This gets reference to remote object registry located at the specified port
-            Registry registry = LocateRegistry.getRegistry(dataIp, dataPort);
-
-            // This rebinds the Data Node to the remote object registry at the specified port in the previous step
-            // Uses the values of id (or 'name') of the Data Node and a Remote which is the stub for this Data node
-            registry.rebind(dataId, dataNodeStub);
-            System.out.println("\n Data Node connected to RMI registry \n");
-        }catch(Exception e){
-            System.err.println("Server Exception: " + e.toString());
-            e.printStackTrace();
+    public DataNodeInterface getDNStub(String dataId, String dataIp, int port){
+        while(true){
+            try{
+                Registry registry = LocateRegistry.getRegistry(dataIp, port);
+                return (DataNodeInterface)registry.lookup(dataId);
+            }catch(Exception ignored){}
         }
     }
 
-    public DataNodeInterface getDNStub(String dataId, String dataIp, int dataPort) {
+    public NameNodeInterface getNNStub(String nameId, String nameIp, int port){
         while(true){
             try{
-                Registry registry = LocateRegistry.getRegistry(dataIp, dataPort);
-                DataNodeInterface dataNodeStub = (DataNodeInterface)registry.lookup(dataId);
-                System.out.println("\n Data Node Found! Replicating to Data Node \n");
-                return dataNodeStub;
-            }catch(RemoteException | NotBoundException e){
-                System.out.println("\n Searching for Data Node ... \n");
-            }
-        }
-    }
-
-    // This method finds the Name Node and returns a stub (Remote to the Name Node) with which the Data Node
-    // could use to invoke functions on the Name Node
-    public NameNodeInterface getNNStub(String id, String ip, int port){
-        while(true){
-            try{
-                // This gets the remote object registry at the specified port
-                Registry registry = LocateRegistry.getRegistry(ip, port);
-                // This gets the Remote to the Name Node using the ID of the Name Node
-                NameNodeInterface nameNodeStub = (NameNodeInterface)registry.lookup(id);
-                System.out.println("\n Name Node Found! \n");
-                return nameNodeStub;
-            }catch(Exception e){
-                System.out.println("\n Searching for Name Node ... \n");
-            }
+                Registry registry = LocateRegistry.getRegistry(nameId, port);
+                return (NameNodeInterface)registry.lookup(nameIp);
+            }catch(Exception ignored){}
         }
     }
 
     public static void main(String[] args){
+        // Upon startup of the data node
+        Properties prop = new Properties();
+        try{
+            // Bind data node to registry
+            String dataNodeId = UUID.randomUUID().toString();
+            String dataNodeIp = InetAddress.getLocalHost().getHostAddress();
+            int dataPort = (args.length == 0) ? 1099 : Integer.parseInt(args[0]);
 
+            Registry serverRegistry = LocateRegistry.createRegistry(dataPort);
+            DataNode newDataNode = (args.length == 0) ? new DataNode(dataNodeId, dataNodeIp) :
+                    new DataNode(dataNodeId, dataNodeIp, dataPort);
+            serverRegistry.bind(dataNodeId, newDataNode);
+
+            System.out.println("Data Node " + dataNodeId + " is running on host " + dataNodeIp + " port " + dataPort);
+
+            // Gets the file handle to the namenode.properties file
+            File file = new File("namenode.properties");
+            FileInputStream fileInputStream = new FileInputStream(file);
+            prop.load(fileInputStream);
+
+            String nameNodeId = prop.getProperty("server_name");
+            String nameNodeIp = prop.getProperty("server_ip");
+            int namePort = Integer.parseInt(prop.getProperty("server_port"));
+
+            // Connect data node to the name node and start sending heartbeats and block reports
+            ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
+            scheduledExecutorService.scheduleAtFixedRate(
+                    new SendHeartbeatBlockReportTask(nameNodeId, nameNodeIp, namePort, newDataNode),
+                    0, 5, TimeUnit.SECONDS);
+        }catch(Exception e){
+            System.out.println("An error has occurred: " + e.getMessage());
+        }
     }
 }

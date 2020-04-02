@@ -2,9 +2,14 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="7ad1498a-67a0-4e0c-85d1-1bf49b2a9e02" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/src/main/java/ds/hdfs/ConfigureHDFS.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/ds/hdfs/ConfigureNameNode.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/ds/hdfs/Client.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ds/hdfs/Client.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/ds/hdfs/DataNode.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ds/hdfs/DataNode.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/ds/hdfs/DataNodeInterface.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ds/hdfs/DataNodeInterface.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/ds/hdfs/NameNode.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ds/hdfs/NameNode.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/ds/hdfs/hdfs.proto" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ds/hdfs/hdfs.proto" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/proto/ProtoHDFS.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/proto/ProtoHDFS.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -48,15 +53,31 @@
     <property name="settings.editor.selected.configurable" value="preferences.lookFeel" />
   </component>
   <component name="RecentsManager">
-    <key name="MoveFile.RECENT_KEYS">
-      <recent name="C:\Users\Kevin Wu\IdeaProjects\MapReduce\src\main\java" />
+    <key name="ExtractSuperBase.RECENT_KEYS">
+      <recent name="ds.hdfs" />
     </key>
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\Kevin Wu\IdeaProjects\MapReduce" />
       <recent name="C:\Users\Kevin Wu\IdeaProjects\MapReduce\src\main\java" />
     </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\Kevin Wu\IdeaProjects\MapReduce\src\main\java" />
+    </key>
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Application.NameNode">
+    <configuration name="NameNode" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="ds.hdfs.NameNode" />
+      <module name="MapReduce" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="ds.hdfs.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="Test" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="ds.hdfs.Test" />
       <module name="MapReduce" />
@@ -72,6 +93,7 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Application.NameNode" />
         <item itemvalue="Application.Test" />
       </list>
     </recent_temporary>
@@ -92,7 +114,7 @@
       <workItem from="1585427818702" duration="31004000" />
       <workItem from="1585673968318" duration="5893000" />
       <workItem from="1585686374386" duration="17999000" />
-      <workItem from="1585713678426" duration="12660000" />
+      <workItem from="1585713678426" duration="36350000" />
     </task>
     <servers />
   </component>
@@ -108,10 +130,10 @@
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="522" y="215" key="#com.intellij.fileTypes.FileTypeChooser/0.0.1536.824@0.0.1536.824" timestamp="1585427859066" />
-    <state x="574" y="122" key="#com.intellij.ide.util.MemberChooser" timestamp="1585281691665">
+    <state x="574" y="122" key="#com.intellij.ide.util.MemberChooser" timestamp="1585779538249">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="574" y="122" key="#com.intellij.ide.util.MemberChooser/0.0.1536.824@0.0.1536.824" timestamp="1585281691665" />
+    <state x="574" y="122" key="#com.intellij.ide.util.MemberChooser/0.0.1536.824@0.0.1536.824" timestamp="1585779538249" />
     <state x="400" y="101" key="#com.intellij.ide.util.frameworkSupport.AddFrameworkSupportDialog" timestamp="1585168345959">
       <screen x="0" y="0" width="1536" height="824" />
     </state>

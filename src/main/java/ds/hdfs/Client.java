@@ -16,10 +16,10 @@ import java.util.stream.Collectors;
 public class Client {
 
     public Client(){
-        // Put stuff here later
+        
     }
 
-    public DataNodeInterface getDataStub(String dataId, String dataIp, int port){
+    public static DataNodeInterface getDataStub(String dataId, String dataIp, int port){
         while(true){
             try{
                 Registry registry = LocateRegistry.getRegistry(dataIp, port);
@@ -28,7 +28,7 @@ public class Client {
         }
     }
 
-    public NameNodeInterface getNameStub(String nameId, String nameIp, int port){
+    public static NameNodeInterface getNameStub(String nameId, String nameIp, int port){
         while(true){
             try{
                 Registry registry = LocateRegistry.getRegistry(nameId, port);
@@ -38,9 +38,9 @@ public class Client {
     }
 
     // This method stores the file in the HDFS
-    public void putFile(String fileName) {
-        System.out.println("Going to put file " + fileName);
-        File file = new File(fileName);
+    public static void putFile(String localFile, String hdfsFile) {
+        System.out.println("Going to put file " + localFile + " into HDFS as " + hdfsFile);
+        File file = new File(localFile);
 
         try{
             // Make block size configurable later
@@ -59,9 +59,10 @@ public class Client {
             assert blocks.size() == numBlocks : "Something went wrong! Did not properly read file into blocks!";
 
             ProtoHDFS.FileHandle.Builder fileHandleBuilder = ProtoHDFS.FileHandle.newBuilder();
-            fileHandleBuilder.setFileName(fileName);
+            fileHandleBuilder.setFileName(hdfsFile);
             fileHandleBuilder.setFileSize(file.length());
             ProtoHDFS.FileHandle fileHandle = fileHandleBuilder.buildPartial();
+            fileHandleBuilder.clear();
 
             ProtoHDFS.Request.Builder requestBuilder = ProtoHDFS.Request.newBuilder();
             String requestId = UUID.randomUUID().toString();
@@ -89,7 +90,7 @@ public class Client {
             if(openResponseType == ProtoHDFS.Response.ResponseType.SUCCESS){
                 // If write file completed successfully send write requests to the data nodes
                 // using the file handle obtained from the response
-                System.out.println("File " + fileName + " successfully opened");
+                System.out.println("File handle for " + localFile + " successfully opened as " + hdfsFile);
 
                 fileHandle = openResponse.getFileHandle();
                 List<ProtoHDFS.Pipeline> pipelineList = fileHandle.getPipelinesList();
@@ -130,14 +131,14 @@ public class Client {
                     ProtoHDFS.Response.ResponseType writeResponseType = writeResponse.getResponseType();
 
                     if(writeResponseType == ProtoHDFS.Response.ResponseType.SUCCESS){
-                        System.out.println("File " + fileName + " successfully written");
+                        System.out.println("File " + localFile + " successfully stored in HDFS as " + hdfsFile);
                     }else{
-                        System.out.println(writeResponse.getErrorMessage());
+                        System.out.println("Storing file " + localFile + " as " + hdfsFile + " failed");
                     }
                 }
             }else{
                 // If failed to open and get file handle
-                System.out.println(openResponse.getErrorMessage());
+                System.out.println("File handle for " + localFile + " failed to open as " + hdfsFile);
             }
 
             // Now send a close request to close (or unlock) the other file handle so other threads can use it
@@ -160,9 +161,9 @@ public class Client {
             // !!!!!!!!!!! We need to implement something that allows it to keep sending close requests until
             // file handle unlocks. Otherwise we'll run into deadlock !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             if(closeResponseType == ProtoHDFS.Response.ResponseType.SUCCESS){
-                System.out.println("File handle for " + fileName + " successfully closed");
+                System.out.println("File handle for " + localFile + " successfully closed on HDFS as " + hdfsFile);
             }else{
-                System.out.println(closeResponse.getErrorMessage());
+                System.out.println("File handle for " + localFile + " failed to close on HDFS as " + hdfsFile);
             }
         }catch(Exception e){
             if(e instanceof RemoteException){
@@ -170,7 +171,7 @@ public class Client {
             }else if(e instanceof InvalidProtocolBufferException){
                 System.out.println("Tried to parse object in put() that is not defined in protocol buffer!");
             }else if(e instanceof FileNotFoundException){
-                System.out.println("Trying to put() " + fileName + " does not exist locally!");
+                System.out.println("Trying to put() " + localFile + " that does not exist locally!");
             }else if(e instanceof IOException){
                 System.out.println("Something went wrong when performing file io in put()!");
             }else{
@@ -181,9 +182,10 @@ public class Client {
         }
     }
 
-    public void getFile(String fileName) {
-        System.out.println("Going to get " + fileName);
-        File file = new File(fileName);
+    public static void getFile(String localFile, String hdfsFile) {
+        System.out.println("Going to get " + hdfsFile);
+        // This file handle is for the local file you want to read to
+        File file = new File(localFile);
 
         try{
             ProtoHDFS.Request.Builder requestBuilder = ProtoHDFS.Request.newBuilder();
@@ -191,7 +193,7 @@ public class Client {
                 FileOutputStream fileOutputStream = new FileOutputStream(file, true);
 
                 ProtoHDFS.FileHandle.Builder fileHandleBuilder = ProtoHDFS.FileHandle.newBuilder();
-                fileHandleBuilder.setFileName(fileName);
+                fileHandleBuilder.setFileName(hdfsFile);
                 fileHandleBuilder.setFileSize(file.length());
                 ProtoHDFS.FileHandle fileHandle = fileHandleBuilder.buildPartial();
                 fileHandleBuilder.clear();
@@ -229,7 +231,7 @@ public class Client {
 
                     // Need to fix here. Doesn't actually read the block
                     if(hasMissingBlock){
-                        System.out.println("Error: File " + fileName + " corrupted!");
+                        System.out.println("Error: File " + hdfsFile + " corrupted when reading to " + localFile);
                     }else{
                         // Get list of blocks. Then send read request to the data nodes containing each block
                         List<ProtoHDFS.Block> blockList = repsList.stream()
@@ -272,7 +274,7 @@ public class Client {
                     }
                 }else{
                     // If file failed to open, print error message
-                    System.out.println("Failed to open file handle to " + fileName);
+                    System.out.println("Failed to open file handle to " + hdfsFile + " while reading to " + localFile);
                 }
 
                 // Now send a close request to close (or unlock) the other file handle so other threads can use it
@@ -290,19 +292,19 @@ public class Client {
                 // !!!!!!!!!!! We need to implement something that allows it to keep sending close requests until
                 // file handle fails to unlock. Otherwise we'll run into deadlock !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 if(closeResponseType == ProtoHDFS.Response.ResponseType.SUCCESS){
-                    System.out.println("File handle for " + fileName + " successfully closed");
+                    System.out.println("File handle for " + hdfsFile + " successfully closed reading to " + localFile);
                 }else{
-                    System.out.println(closeResponse.getErrorMessage());
+                    System.out.println("File handle for " + hdfsFile + " failed to close reading to " + localFile);
                 }
             }else{
-                System.out.println("Failed to create " + fileName + " to read to");
+                System.out.println("Failed to create " + localFile + " to read " + hdfsFile);
             }
         }catch(Exception e){
-            System.out.println("File " + fileName + " not found!");
+            System.out.println("File " + hdfsFile + " not found in HDFS while reading to " + localFile);
         }
     }
 
-    public void list() {
+    public static void list() {
         try{
             ProtoHDFS.Request.Builder listRequestBuilder = ProtoHDFS.Request.newBuilder();
             String listRequestId = UUID.randomUUID().toString();
@@ -348,6 +350,26 @@ public class Client {
     }
 
     public static void main(String[] args){
-
+        // Input arguments are: command, input file, output file
+        try{
+            switch (args[0]) {
+                case "put":
+                    putFile(args[0], args[1]);
+                    break;
+                case "get":
+                    getFile(args[0], args[1]);
+                    break;
+                case "delete":
+                    // Coming soon :)
+                    break;
+                case "list":
+                    list();
+                    break;
+                default:
+                    throw new IOException();
+            }
+        }catch (IOException e){
+            System.out.println("You have inputted the wrong number of arguments or an invalid command");
+        }
     }
 }

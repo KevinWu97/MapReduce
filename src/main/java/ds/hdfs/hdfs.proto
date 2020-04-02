@@ -79,6 +79,6 @@ message Heartbeat {
 
 message BlockReport {
     required string dataId = 1;
-    repeated Block dataNodeBlocks = 2;
+    repeated BlockMeta dataNodeBlocks = 2;
 }
 
